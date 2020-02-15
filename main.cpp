@@ -1,7 +1,6 @@
 #include "qcustomplot.h"
-#include <QMainWindow>
-
 #include <QApplication>
+#include <QMainWindow>
 #include <tuple>
 
 using AxisData = QVector<double>;
@@ -71,6 +70,14 @@ int main(int argc, char* argv[])
             cp->setInteractions(QCP::iRangeDrag);
             cp->setSelectionRectMode(QCP::srmNone);
         }
+
+        auto axisRect = cp->axisRectAt(event->pos());
+        if (axisRect)
+        {
+            // понятно, что может упасть, но у нас же есть как минимум один график =)
+            auto graph = *(axisRect->graphs().begin());
+            qDebug() << graph->name();
+        }
     });
 
     QObject::connect(cp, &QCustomPlot::mouseRelease, [&](QMouseEvent* event) {
@@ -80,6 +87,11 @@ int main(int argc, char* argv[])
             cp->setInteractions(QCP::iRangeZoom);
             cp->setSelectionRectMode(QCP::srmZoom);
         }
+    });
+
+    QObject::connect(cp, &QCustomPlot::mouseMove, [&](QMouseEvent* event) {
+        auto pos = event->pos();
+        qDebug() << cp->xAxis->pixelToCoord(pos.x()) << cp->yAxis->pixelToCoord(pos.y());
     });
 
     window.show();
