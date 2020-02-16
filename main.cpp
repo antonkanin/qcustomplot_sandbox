@@ -71,7 +71,6 @@ int main(int argc, char* argv[])
         if (Qt::LeftButton == event->button())
         {
             mouseStartPosition = event->pos();
-            cp->setSelectionRectMode(QCP::srmNone);
         }
 
         if (Qt::RightButton == event->button())
@@ -98,19 +97,15 @@ int main(int argc, char* argv[])
     });
 
     QObject::connect(cp, &QCustomPlot::mouseRelease, [&](QMouseEvent* event) {
-        // отлючаем зум, включаем перетаскивания графика
-        if (Qt::LeftButton == event->button())
-        {
-            cp->setSelectionRectMode(QCP::srmZoom);
-        }
-
         if (Qt::RightButton == event->button() && startLine)
         {
             const auto horRangeBegin = startLine->point1->coords().x();
             const auto horRangeEnd   = endLine->point1->coords().x();
 
             for (auto axisRect : cp->axisRects())
+            {
                 axisRect->axis(QCPAxis::atBottom)->setRange(horRangeBegin, horRangeEnd);
+            }
 
             cp->removeItem(startLine);
             startLine = nullptr;
@@ -153,7 +148,7 @@ int main(int argc, char* argv[])
             mouseStartPosition = event->pos();
         }
 
-        if (endLine)
+        if ((Qt::RightButton & event->buttons()) && endLine)
         {
             endLine->point1->setPixelPosition(event->pos());
             endLine->point2->setPixelPosition(event->pos() + upVector);
