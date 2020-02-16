@@ -80,27 +80,22 @@ int main(int argc, char* argv[])
         {
             if (!startLine)
             {
-                qDebug() << "line";
                 const auto pos = event->pos();
 
+                const auto axisRect = cp->axisRectAt(pos);
+
                 startLine = new QCPItemStraightLine(cp);
+                startLine->setClipAxisRect(axisRect);
                 startLine->point1->setPixelPosition(pos);
                 startLine->point2->setPixelPosition(pos + upVector);
 
                 endLine = new QCPItemStraightLine(cp);
+                endLine->setClipAxisRect(axisRect);
                 endLine->point1->setPixelPosition(pos);
                 endLine->point2->setPixelPosition(pos + upVector);
 
                 cp->replot();
             }
-        }
-
-        const auto axisRect = cp->axisRectAt(event->pos());
-        if (axisRect)
-        {
-            // понятно, что может упасть, но у нас же есть как минимум один график =)
-            auto graph = *(axisRect->graphs().begin());
-            qDebug() << graph->name();
         }
     });
 
