@@ -43,10 +43,13 @@ int main(int argc, char* argv[])
     // "верхний" график
     {
         auto topAxisRect = new QCPAxisRect(cp);
+        topAxisRect->axis(QCPAxis::atBottom)->setLabel("X");
+        topAxisRect->axis(QCPAxis::atLeft)->setLabel("Y");
 
         cp->plotLayout()->addElement(0, 0, topAxisRect);
         auto topGraph =
             cp->addGraph(topAxisRect->axis(QCPAxis::atBottom), topAxisRect->axis(QCPAxis::atLeft));
+
         topGraph->setData(x, y);
         topGraph->rescaleAxes();
     }
@@ -54,10 +57,13 @@ int main(int argc, char* argv[])
     // "нижний" график
     {
         auto bottomAxisRect = new QCPAxisRect(cp);
-        cp->plotLayout()->addElement(1, 0, bottomAxisRect);
+        bottomAxisRect->axis(QCPAxis::atBottom)->setLabel("X");
+        bottomAxisRect->axis(QCPAxis::atLeft)->setLabel("Y");
 
+        cp->plotLayout()->addElement(1, 0, bottomAxisRect);
         auto bottomGraph = cp->addGraph(
             bottomAxisRect->axis(QCPAxis::atBottom), bottomAxisRect->axis(QCPAxis::atLeft));
+
         bottomGraph->setData(x, y);
         bottomGraph->rescaleAxes();
     }
@@ -166,7 +172,11 @@ int main(int argc, char* argv[])
             const auto wheelSteps = event->delta() / 120.0;
             const auto factor     = qPow(axisRect->rangeZoomFactor(Qt::Horizontal), wheelSteps);
 
-            axisRect->axis(QCPAxis::atBottom)->scaleRange(factor);
+            // НЕ делаем масштабирование по горизонтали если нажат Ctrl
+            if (false == (QApplication::keyboardModifiers() & Qt::ControlModifier))
+            {
+                axisRect->axis(QCPAxis::atBottom)->scaleRange(factor);
+            }
 
             if (axisRect == currentAxisRect)
                 axisRect->axis(QCPAxis::atLeft)->scaleRange(factor);
