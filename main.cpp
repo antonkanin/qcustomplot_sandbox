@@ -62,9 +62,6 @@ int main(int argc, char* argv[])
         bottomGraph->rescaleAxes();
     }
 
-    // включаем зум по средней кнопке мыши
-    cp->setInteractions(QCP::iRangeZoom);
-
     QCPItemStraightLine* startLine{};
     QCPItemStraightLine* endLine{};
 
@@ -103,38 +100,63 @@ int main(int argc, char* argv[])
         // отлючаем зум, включаем перетаскивания графика
         if (Qt::LeftButton == event->button())
         {
-            cp->setInteractions(QCP::iRangeZoom);
             cp->setSelectionRectMode(QCP::srmZoom);
         }
 
-        if (Qt::RightButton == event->button())
+        if (Qt::RightButton == event->button() && startLine)
         {
-            const auto axisRect = cp->axisRectAt(event->pos());
-            if (axisRect)
-            {
-                axisRect->zoom(
-                    { startLine->point1->pixelPosition(), endLine->point1->pixelPosition() },
-                    { axisRect->axis(QCPAxis::atBottom) });
-            }
+            const auto horRangeBegin = startLine->point1->coords().x();
+            const auto horRangeEnd   = endLine->point1->coords().x();
 
-            if (startLine)
-            {
-                cp->removeItem(startLine);
-                startLine = nullptr;
+            for (auto axisRect : cp->axisRects())
+                axisRect->axis(QCPAxis::atBottom)->setRange(horRangeBegin, horRangeEnd);
 
-                cp->removeItem(endLine);
-                endLine = nullptr;
+            cp->removeItem(startLine);
+            startLine = nullptr;
 
-                cp->replot();
-            }
+            cp->removeItem(endLine);
+            endLine = nullptr;
+
+            cp->replot();
         }
     });
 
     QObject::connect(cp, &QCustomPlot::mouseMove, [&](QMouseEvent* event) {
+        if (Qt::LeftButton == event->button())
+        {
+            const auto currenAxisRect = cp->axisRectAt(event->pos());
+
+            for (auto axisRect : cp->axisRects())
+            {
+                if (axisRect != currenAxisRect)
+                {
+                    // work in progress....
+                }
+            }
+        }
+
         if (endLine)
         {
             endLine->point1->setPixelPosition(event->pos());
             endLine->point2->setPixelPosition(event->pos() + upVector);
+
+            cp->replot();
+        }
+    });
+
+    QObject::connect(cp, &QCustomPlot::mouseWheel, [&](QWheelEvent* event) {
+        auto currentAxisRect = cp->axisRectAt(event->pos());
+
+        for (auto axisRect : cp->axisRects())
+        {
+            // математику подсмотрел в void QCPAxisRect::wheelEvent(QWheelEvent *event)
+            const auto wheelSteps = event->delta() / 120.0;
+            const auto factor     = qPow(axisRect->rangeZoomFactor(Qt::Horizontal), wheelSteps);
+
+            axisRect->axis(QCPAxis::atBottom)->scaleRange(factor);
+
+            if (axisRect == currentAxisRect)
+                axisRect->axis(QCPAxis::atLeft)->scaleRange(factor);
 
             cp->replot();
         }
