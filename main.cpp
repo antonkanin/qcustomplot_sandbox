@@ -65,11 +65,12 @@ int main(int argc, char* argv[])
     QCPItemStraightLine* startLine{};
     QCPItemStraightLine* endLine{};
 
+    QPointF mouseStartPosition{};
+
     QObject::connect(cp, &QCustomPlot::mousePress, [&](QMouseEvent* event) {
-        // включаем зум по прямоугольной области
         if (Qt::LeftButton == event->button())
         {
-            cp->setInteractions(QCP::iRangeDrag);
+            mouseStartPosition = event->pos();
             cp->setSelectionRectMode(QCP::srmNone);
         }
 
@@ -122,17 +123,34 @@ int main(int argc, char* argv[])
     });
 
     QObject::connect(cp, &QCustomPlot::mouseMove, [&](QMouseEvent* event) {
-        if (Qt::LeftButton == event->button())
+        if (Qt::LeftButton & event->buttons())
         {
-            const auto currenAxisRect = cp->axisRectAt(event->pos());
+            auto currentAxis = cp->axisRectAt(event->pos());
 
             for (auto axisRect : cp->axisRects())
             {
-                if (axisRect != currenAxisRect)
                 {
-                    // work in progress....
+                    auto horAxis = axisRect->axis(QCPAxis::atBottom);
+
+                    const auto diff = horAxis->pixelToCoord(mouseStartPosition.x()) -
+                                      horAxis->pixelToCoord(event->pos().x());
+
+                    horAxis->moveRange(diff);
+                }
+
+                if (currentAxis == axisRect)
+                {
+                    auto vertAxis = axisRect->axis(QCPAxis::atLeft);
+
+                    const auto diff = vertAxis->pixelToCoord(mouseStartPosition.y()) -
+                                      vertAxis->pixelToCoord(event->pos().y());
+
+                    vertAxis->moveRange(diff);
                 }
             }
+            cp->replot();
+
+            mouseStartPosition = event->pos();
         }
 
         if (endLine)
