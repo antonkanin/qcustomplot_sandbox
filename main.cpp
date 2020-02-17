@@ -243,7 +243,8 @@ int main(int argc, char* argv[])
 
                 QTextCharFormat format;
                 format.setObjectType(PlotTextFormat);
-                format.setProperty(1, QVariant::fromValue(picture));
+                format.setProperty(
+                    QCPDocumentObject::PicturePropertyId, QVariant::fromValue(picture));
 
                 cursor.beginEditBlock();
                 cursor.insertText(QString(QChar::ObjectReplacementCharacter), format);

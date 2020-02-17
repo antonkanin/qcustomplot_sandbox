@@ -27,7 +27,7 @@ void QCPDocumentObject::drawObject(QPainter* painter, const QRectF& rect, QTextD
 
     QSize finalSize = pic.boundingRect().size();
     finalSize.scale(rect.size().toSize(), Qt::KeepAspectRatio);
-    double scaleFactor = finalSize.width() / (double)pic.boundingRect().size().width();
+    double scaleFactor = finalSize.width() / static_cast<double>(pic.boundingRect().size().width());
     painter->save();
     painter->scale(scaleFactor, scaleFactor);
     painter->setClipRect(rect);
