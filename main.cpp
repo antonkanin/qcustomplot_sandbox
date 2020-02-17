@@ -1,3 +1,4 @@
+#include "qcpdocumentobject.h"
 #include "qcustomplot.h"
 #include <QApplication>
 #include <QMainWindow>
@@ -43,6 +44,9 @@ int main(int argc, char* argv[])
 
     auto savePngButton = new QPushButton("Save as PNG");
     layout->addWidget(savePngButton);
+
+    auto savePdfButton = new QPushButton("Save as PDF");
+    layout->addWidget(savePdfButton);
 
     // получаем данные для графиков
     const auto [x, y] = plotData();
@@ -198,15 +202,67 @@ int main(int argc, char* argv[])
         QSvgGenerator svgGenerator;
         svgGenerator.setFileName("image.svg");
 
-        QCPPainter qcpPainter;
-        qcpPainter.begin(&svgGenerator);
-        cp->toPainter(&qcpPainter, 800, 600);
-        qcpPainter.end();
+        QCPPainter painter;
+        painter.begin(&svgGenerator);
+        cp->toPainter(&painter, 800, 600);
+        painter.end();
     });
 
     QObject::connect(savePngButton, &QPushButton::pressed, [&]() {
         qDebug() << "Saving to PNG";
         cp->savePng("image.png", 800, 600);
+    });
+
+    QObject::connect(savePdfButton, &QPushButton::pressed, [&]() {
+        qDebug() << "Saving to PDF";
+        QTextDocument document;
+
+        const int PlotTextFormat = QTextFormat::UserObject + 3902;
+
+        document.documentLayout()->registerHandler(PlotTextFormat, new QCPDocumentObject(&window));
+
+        {
+            QTextCursor cursor(&document);
+
+            {
+                QString html = "<h1>Document Title1</h1>"
+                               "Some simple text to test the reporting</br>"
+                               "Second line of this awesome report";
+
+                cursor.beginEditBlock();
+                cursor.insertHtml(html);
+                cursor.endEditBlock();
+            }
+
+            {
+                QPicture   picture;
+                QCPPainter painter;
+                painter.begin(&picture);
+                cp->toPainter(&painter, 400, 400);
+                painter.end();
+
+                QTextCharFormat format;
+                format.setObjectType(PlotTextFormat);
+                format.setProperty(1, QVariant::fromValue(picture));
+
+                cursor.beginEditBlock();
+                cursor.insertText(QString(QChar::ObjectReplacementCharacter), format);
+                cursor.endEditBlock();
+            }
+
+            {
+                cursor.beginEditBlock();
+                cursor.insertText("\nJust a text at the end of the report");
+                cursor.endEditBlock();
+            }
+
+            {
+                QPrinter printer(QPrinter::PrinterResolution);
+                printer.setOutputFormat(QPrinter::PdfFormat);
+                printer.setOutputFileName("image.pdf");
+                document.print(&printer);
+            }
+        }
     });
 
     window.show();

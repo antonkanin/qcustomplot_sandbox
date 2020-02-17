@@ -17,9 +17,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     main.cpp \
+    qcpdocumentobject.cpp \
     qcustomplot.cpp
 
 HEADERS += \
+    qcpdocumentobject.h \
     qcustomplot.h
 
 FORMS +=
