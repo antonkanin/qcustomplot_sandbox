@@ -1,6 +1,7 @@
 #include "qcustomplot.h"
 #include <QApplication>
 #include <QMainWindow>
+#include <QSvgGenerator>
 #include <tuple>
 
 using AxisData = QVector<double>;
@@ -36,6 +37,12 @@ int main(int argc, char* argv[])
     auto cp = new QCustomPlot(&window);
     layout->addWidget(cp);
     cp->plotLayout()->clear();
+
+    auto saveSvgButton = new QPushButton("Save as SVG");
+    layout->addWidget(saveSvgButton);
+
+    auto savePngButton = new QPushButton("Save as PNG");
+    layout->addWidget(savePngButton);
 
     // получаем данные для графиков
     const auto [x, y] = plotData();
@@ -183,6 +190,23 @@ int main(int argc, char* argv[])
 
             cp->replot();
         }
+    });
+
+    QObject::connect(saveSvgButton, &QPushButton::pressed, [&]() {
+        qDebug() << "Saving to SVG";
+
+        QSvgGenerator svgGenerator;
+        svgGenerator.setFileName("image.svg");
+
+        QCPPainter qcpPainter;
+        qcpPainter.begin(&svgGenerator);
+        cp->toPainter(&qcpPainter, 800, 600);
+        qcpPainter.end();
+    });
+
+    QObject::connect(savePngButton, &QPushButton::pressed, [&]() {
+        qDebug() << "Saving to PNG";
+        cp->savePng("image.png", 800, 600);
     });
 
     window.show();
