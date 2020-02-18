@@ -24,6 +24,46 @@ std::tuple<AxisData, AxisData> plotData()
     return { x, y };
 }
 
+void generateReport(QTextCursor& cursor, QCustomPlot* cp)
+{
+    {
+        QString html = "<h1>Document Title1</h1>"
+                       "Some simple text to test the reporting<br/>"
+                       "Second line of this awesome report<br/><br/>";
+
+        cursor.beginEditBlock();
+        cursor.insertHtml(html);
+        cursor.endEditBlock();
+    }
+
+    {
+        QPicture   picture;
+        QCPPainter painter;
+        painter.begin(&picture);
+        cp->toPainter(&painter, 400, 400);
+        painter.end();
+
+        QTextCharFormat format;
+        format.setObjectType(QCPDocumentObject::PlotTextFormat);
+        format.setProperty(QCPDocumentObject::PicturePropertyId, QVariant::fromValue(picture));
+
+        cursor.beginEditBlock();
+        cursor.insertText(QString(QChar::ObjectReplacementCharacter), format);
+        cursor.endEditBlock();
+    }
+
+    {
+        cursor.beginEditBlock();
+        cursor.insertHtml("<br/>Just a text at the end of the report<br/><br/>");
+        cursor.endEditBlock();
+    }
+}
+
+void registerHandler(QAbstractTextDocumentLayout* layout, QObject& parent)
+{
+    layout->registerHandler(QCPDocumentObject::PlotTextFormat, new QCPDocumentObject(&parent));
+}
+
 int main(int argc, char* argv[])
 {
     QApplication a(argc, argv);
@@ -33,20 +73,43 @@ int main(int argc, char* argv[])
     auto centralWidget = new QWidget(&window);
     window.setCentralWidget(centralWidget);
 
-    auto layout = new QVBoxLayout(centralWidget);
+    auto mainLayout = new QHBoxLayout(centralWidget);
+
+    auto leftWidget  = new QWidget(&window);
+    auto rightWidget = new QWidget(&window);
+    {
+        QSizePolicy spPreferred(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        spPreferred.setHorizontalStretch(1);
+
+        leftWidget->setSizePolicy(spPreferred);
+        mainLayout->addWidget(leftWidget);
+
+        rightWidget->setSizePolicy(spPreferred);
+        mainLayout->addWidget(rightWidget);
+    }
+
+    auto graphicslayout = new QVBoxLayout(leftWidget);
+
+    auto textLayout = new QVBoxLayout(rightWidget);
 
     auto cp = new QCustomPlot(&window);
-    layout->addWidget(cp);
+    graphicslayout->addWidget(cp);
     cp->plotLayout()->clear();
 
     auto saveSvgButton = new QPushButton("Save as SVG");
-    layout->addWidget(saveSvgButton);
+    graphicslayout->addWidget(saveSvgButton);
 
     auto savePngButton = new QPushButton("Save as PNG");
-    layout->addWidget(savePngButton);
+    graphicslayout->addWidget(savePngButton);
 
     auto savePdfButton = new QPushButton("Save as PDF");
-    layout->addWidget(savePdfButton);
+    graphicslayout->addWidget(savePdfButton);
+
+    auto addToDocumentButton = new QPushButton("Add to Document ->");
+    graphicslayout->addWidget(addToDocumentButton);
+
+    auto textEdit = new QTextEdit();
+    textLayout->addWidget(textEdit);
 
     // получаем данные для графиков
     const auto [x, y] = plotData();
@@ -217,45 +280,11 @@ int main(int argc, char* argv[])
         qDebug() << "Saving to PDF";
         QTextDocument document;
 
-        const int PlotTextFormat = QTextFormat::UserObject + 3902;
-
-        document.documentLayout()->registerHandler(PlotTextFormat, new QCPDocumentObject(&window));
-
+        registerHandler(document.documentLayout(), window);
         {
             QTextCursor cursor(&document);
 
-            {
-                QString html = "<h1>Document Title1</h1>"
-                               "Some simple text to test the reporting</br>"
-                               "Second line of this awesome report";
-
-                cursor.beginEditBlock();
-                cursor.insertHtml(html);
-                cursor.endEditBlock();
-            }
-
-            {
-                QPicture   picture;
-                QCPPainter painter;
-                painter.begin(&picture);
-                cp->toPainter(&painter, 400, 400);
-                painter.end();
-
-                QTextCharFormat format;
-                format.setObjectType(PlotTextFormat);
-                format.setProperty(
-                    QCPDocumentObject::PicturePropertyId, QVariant::fromValue(picture));
-
-                cursor.beginEditBlock();
-                cursor.insertText(QString(QChar::ObjectReplacementCharacter), format);
-                cursor.endEditBlock();
-            }
-
-            {
-                cursor.beginEditBlock();
-                cursor.insertText("\nJust a text at the end of the report");
-                cursor.endEditBlock();
-            }
+            generateReport(cursor, cp);
 
             {
                 QPrinter printer(QPrinter::PrinterResolution);
@@ -264,6 +293,16 @@ int main(int argc, char* argv[])
                 document.print(&printer);
             }
         }
+    });
+
+    QObject::connect(addToDocumentButton, &QPushButton::pressed, [&]() {
+        qDebug() << "Add to Document";
+        registerHandler(textEdit->document()->documentLayout(), window);
+
+        // TODO (Anton) figure out why I can't pass just textEdit->textCursor()
+        // generateReport(textEdit->textCursor(), cp);
+        auto cursor = textEdit->textCursor();
+        generateReport(cursor, cp);
     });
 
     window.show();

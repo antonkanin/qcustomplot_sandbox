@@ -12,6 +12,11 @@ class QCPDocumentObject : public QObject, public QTextObjectInterface
 public:
     enum
     {
+        PlotTextFormat = QTextFormat::UserObject
+    };
+
+    enum
+    {
         PicturePropertyId = 1
     };
 
