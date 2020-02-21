@@ -108,6 +108,9 @@ int main(int argc, char* argv[])
     auto addToDocumentButton = new QPushButton("Add to Document ->");
     graphicslayout->addWidget(addToDocumentButton);
 
+    auto addHtmlFromFile = new QPushButton("Add HTML from file ->");
+    graphicslayout->addWidget(addHtmlFromFile);
+
     auto textEdit = new QTextEdit();
     textLayout->addWidget(textEdit);
 
@@ -303,6 +306,35 @@ int main(int argc, char* argv[])
         // generateReport(textEdit->textCursor(), cp);
         auto cursor = textEdit->textCursor();
         generateReport(cursor, cp);
+    });
+
+    QObject::connect(addHtmlFromFile, &QPushButton::pressed, [&]() {
+        qDebug() << "Add HTML from File";
+
+        QString htmlString{};
+
+        {
+            QFile file("/home/anton/Nextcloud/slon/Incoming/20200219_html_report_sample/public/"
+                       "index.html");
+            if (!file.open(QIODevice::ReadOnly))
+                throw std::runtime_error("Could not open html file");
+
+            QTextStream in(&file);
+            while (!in.atEnd())
+            {
+                QString line = in.readLine();
+//                qDebug() << line;
+                htmlString += line;
+            }
+        }
+
+        {
+            auto cursor = textEdit->textCursor();
+
+            cursor.beginEditBlock();
+            cursor.insertHtml(htmlString);
+            cursor.endEditBlock();
+        }
     });
 
     window.show();
