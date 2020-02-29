@@ -111,6 +111,9 @@ int main(int argc, char* argv[])
     auto addHtmlFromFile = new QPushButton("Add HTML from file ->");
     graphicslayout->addWidget(addHtmlFromFile);
 
+    auto hideGraph = new QPushButton("Hide graph");
+    graphicslayout->addWidget(hideGraph);
+
     auto textEdit = new QTextEdit();
     textLayout->addWidget(textEdit);
 
@@ -118,13 +121,14 @@ int main(int argc, char* argv[])
     const auto [x, y] = plotData();
 
     // "верхний" график
+    QCPGraph* topGraph{};
     {
         auto topAxisRect = new QCPAxisRect(cp);
         topAxisRect->axis(QCPAxis::atBottom)->setLabel("X");
         topAxisRect->axis(QCPAxis::atLeft)->setLabel("Y");
 
         cp->plotLayout()->addElement(0, 0, topAxisRect);
-        auto topGraph =
+        topGraph =
             cp->addGraph(topAxisRect->axis(QCPAxis::atBottom), topAxisRect->axis(QCPAxis::atLeft));
 
         topGraph->setData(x, y);
@@ -323,7 +327,7 @@ int main(int argc, char* argv[])
             while (!in.atEnd())
             {
                 QString line = in.readLine();
-//                qDebug() << line;
+                //                qDebug() << line;
                 htmlString += line;
             }
         }
@@ -335,6 +339,46 @@ int main(int argc, char* argv[])
             cursor.insertHtml(htmlString);
             cursor.endEditBlock();
         }
+    });
+
+    QObject::connect(hideGraph, &QPushButton::pressed, [&]() {
+        // never ever user local static variables, only I can do that :)
+        static bool isVisible = true;
+
+        if (isVisible)
+        {
+            hideGraph->setText("Show Graph");
+
+            auto topElement = cp->plotLayout()->element(0, 0);
+            cp->plotLayout()->remove(topElement);
+
+            cp->removeGraph(topGraph);
+            topGraph = nullptr;
+
+            cp->plotLayout()->simplify();
+        }
+        else
+        {
+            hideGraph->setText("Hide Graph");
+
+            auto topAxisRect = new QCPAxisRect(cp);
+            {
+                topAxisRect->axis(QCPAxis::atBottom)->setLabel("X");
+                topAxisRect->axis(QCPAxis::atLeft)->setLabel("Y");
+
+                cp->plotLayout()->insertRow(0);
+                cp->plotLayout()->addElement(0, 0, topAxisRect);
+                topGraph = cp->addGraph(
+                    topAxisRect->axis(QCPAxis::atBottom), topAxisRect->axis(QCPAxis::atLeft));
+
+                topGraph->setData(x, y);
+                topGraph->rescaleAxes();
+            }
+        }
+
+        cp->replot();
+
+        isVisible = !isVisible;
     });
 
     window.show();
